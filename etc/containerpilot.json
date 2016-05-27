@@ -1,0 +1,20 @@
+{
+  "consul": "{{ .CONSUL }}:8500",
+  "preStart": "python /usr/local/bin/manage.py",
+  "services": [
+    {
+      "name": "mongodb",
+      "port": 27017,
+      "health": "python /usr/local/bin/manage.py health",
+      "poll": 5,
+      "ttl": 25
+    }
+  ],
+  "backends": [
+    {
+      "name": "mongodb-primary",
+      "poll": 10,
+      "onChange": "python /usr/local/bin/manage.py on_change"
+    }
+  ]
+}

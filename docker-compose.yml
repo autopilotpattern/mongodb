@@ -1,0 +1,33 @@
+mongodb:
+    image: autopilotpattern/mongodb:latest
+    mem_limit: 4g
+    restart: always
+    # expose for linking, but each container gets a private IP for
+    # internal use as well
+    expose:
+      - 27017
+    labels:
+      - triton.cns.services=mongodb
+    env_file: _env
+    environment:
+      - CONTAINERPILOT=file:///etc/containerpilot.json
+
+consul:
+    image: consul:v0.6.4
+#    command: -bootstrap -ui-dir /ui
+    restart: always
+    mem_limit: 128m
+    ports:
+      - 8500
+    expose:
+      - 53
+      - 8300
+      - 8301
+      - 8302
+      - 8400
+      - 8500
+    dns:
+      - 127.0.0.1
+    labels:
+      - triton.cns.services=consul
+
