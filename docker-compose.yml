@@ -14,7 +14,7 @@ mongodb:
 
 consul:
     image: consul:v0.6.4
-#    command: -bootstrap -ui-dir /ui
+    command: agent -dev -ui -client=0.0.0.0
     restart: always
     mem_limit: 128m
     ports:

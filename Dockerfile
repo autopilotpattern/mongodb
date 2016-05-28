@@ -37,6 +37,7 @@ ENTRYPOINT []
 
 CMD [ \
 	"containerpilot", \
-	"mongod" \
+	"mongod", \
+	"--replSet=joyent" \
 ]
 
