@@ -9,7 +9,6 @@ import struct
 import sys
 import time
 
-import pprint
 from functools import wraps
 
 import consul as pyconsul
@@ -239,7 +238,6 @@ def mongo_update_replset_config(local_mongo, hostname):
     called from the primary node to update the replica config in mongo
     using the current set of healthy mongo containers listed in consul
     '''
-    pp = pprint.PrettyPrinter(indent=2)
     try:
         repl_config = local_mongo.admin.command('replSetGetConfig')
         if not repl_config['ok']:
@@ -280,7 +278,6 @@ def mongo_update_replset_config(local_mongo, hostname):
         if changed:
             repl_config['members'] = new_members
             repl_config['version'] += 1
-            pp.pprint(repl_config)
             local_mongo.admin.command('replSetReconfig', repl_config)
             log.info('updating replica config in mongo from consul info')
 
