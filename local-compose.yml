@@ -2,6 +2,7 @@ version: '2'
 services:
     mongodb:
         image: autopilotpattern/mongodb:latest
+        command: containerpilot mongod --replSet=pilot
         restart: always
         mem_limit: 512m
         build: .

@@ -54,6 +54,7 @@ def get_environ(key, default):
     try:
         val = val.split('#')[0]
         val = val.strip()
+        val = os.path.expandvars(val)
     finally:
         # just swallow AttributeErrors for non-strings
         return val
@@ -67,7 +68,6 @@ SESSION_TTL = int(get_environ('SESSION_TTL', 60))
 # consts for node state
 PRIMARY = 'mongodb-primary'
 SECONDARY = 'mongodb-secondary'
-REPLICA = 'mongodb'
 
 # key where primary will be stored in consul
 PRIMARY_KEY = get_environ('PRIMARY_KEY', 'mongodb-primary')
@@ -239,34 +239,48 @@ def mongo_update_replset_config(local_mongo, hostname):
     using the current set of healthy mongo containers listed in consul
     '''
     try:
+        # get current replica config from mongodb
         repl_config = local_mongo.admin.command('replSetGetConfig')
         if not repl_config['ok']:
             raise Exception('could not get replica config: %s' % repl_config['errmsg'])
         repl_config = repl_config['config']
+        
         # TODO use consul.agent.health() instead?
+        # get list of mongo servers from consul
         consul_services = consul.agent.services()
 
+        # translate the name stored by consul to be the "host" name stored
+        # in mongo config, skipping any non-mongo services
         mongos_in_consul = []
         for x in consul_services:
             host = consul_to_mongo_hostname(consul_services[x]['ID'])
             if host:
                 mongos_in_consul.append(host)
+        # empty list from consul means we have nothing to compare against
         if not len(mongos_in_consul):
             return
+        # if the master node is not in the consul services list we need to
+        # wait a little longer before configuring mongo
         if not hostname + ':27017' in mongos_in_consul:
             return
 
         max_id = 0
         changed = False
         new_members = []
+        # loop over members in mongo replica config
         for member in repl_config['members']:
             if member['_id'] > max_id:
+                # find the max `-id` for adding new members later
                 max_id = member['_id']
             if member['host'] in mongos_in_consul:
+                # this member is also in consul confg so keep it
                 mongos_in_consul.remove(member['host'])
                 new_members.append(member)
             else:
+                # this member is not in consul, it will be removed from mongo config
                 changed = True
+
+        # add mongo servers that are listed in consul, but not yet in mongo config
         for host in mongos_in_consul:
             changed = True
             max_id += 1
@@ -274,7 +288,8 @@ def mongo_update_replset_config(local_mongo, hostname):
                     '_id': max_id,
                     'host': host,
                 })
-        
+
+        # update mongo replica config with the new list if there are changes
         if changed:
             repl_config['members'] = new_members
             repl_config['version'] += 1

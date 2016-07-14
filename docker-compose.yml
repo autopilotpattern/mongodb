@@ -2,7 +2,7 @@ version: '2'
 services:
     mongodb:
         extends:
-            file: docker-compose.yml
+            file: local-compose.yml
             service: mongodb
         mem_limit: 4g
         labels:
@@ -11,7 +11,7 @@ services:
 
     consul:
         extends:
-            file: docker-compose.yml
+            file: local-compose.yml
             service: consul
         labels:
             - triton.cns.services=consul
