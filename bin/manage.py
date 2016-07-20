@@ -66,8 +66,8 @@ SESSION_NAME = get_environ('SESSION_NAME', 'mongodb-replica-set-lock')
 SESSION_TTL = int(get_environ('SESSION_TTL', 60))
 
 # consts for node state
-PRIMARY = 'mongodb-primary'
-SECONDARY = 'mongodb-secondary'
+PRIMARY = 'mongodb-replicaset'
+#SECONDARY = 'mongodb-secondary'
 
 # key where primary will be stored in consul
 PRIMARY_KEY = get_environ('PRIMARY_KEY', 'mongodb-primary')
@@ -78,36 +78,36 @@ MONGO_RETRY_TIMES=int(get_environ('MONGO_RETRY_TIMES', 10))
 
 # ---------------------------------------------------------
 
-class ContainerPilot(object):
-    """
-    ContainerPilot config is where we rewrite ContainerPilot's own config
-    so that we can dynamically alter what service we advertise
-    """
-
-    def __init__(self):
-        # TODO: we should make sure we can support JSON-in-env-var
-        # the same as ContainerPilot itself
-        self.path = get_environ('CONTAINERPILOT', None).replace('file://', '')
-        with open(self.path, 'r') as f:
-            self.config = json.loads(f.read())
-
-    @debug
-    def update(self, state):
-        if state and self.config['services'][0]['name'] != state:
-            self.config['services'][0]['name'] = state
-            self.render()
-            return True
-
-    @debug
-    def render(self):
-        new_config = json.dumps(self.config)
-        with open(self.path, 'w') as f:
-            f.write(new_config)
-
-    def reload(self):
-        """ force ContainerPilot to reload its configuration """
-        log.info('Reloading ContainerPilot configuration.')
-        os.kill(1, signal.SIGHUP)
+#class ContainerPilot(object):
+#    """
+#    ContainerPilot config is where we rewrite ContainerPilot's own config
+#    so that we can dynamically alter what service we advertise
+#    """
+#
+#    def __init__(self):
+#        # TODO: we should make sure we can support JSON-in-env-var
+#        # the same as ContainerPilot itself
+#        self.path = get_environ('CONTAINERPILOT', None).replace('file://', '')
+#        with open(self.path, 'r') as f:
+#            self.config = json.loads(f.read())
+#
+#    @debug
+#    def update(self, state):
+#        if state and self.config['services'][0]['name'] != state:
+#            self.config['services'][0]['name'] = state
+#            self.render()
+#            return True
+#
+#    @debug
+#    def render(self):
+#        new_config = json.dumps(self.config)
+#        with open(self.path, 'w') as f:
+#            f.write(new_config)
+#
+#    def reload(self):
+#        """ force ContainerPilot to reload its configuration """
+#        log.info('Reloading ContainerPilot configuration.')
+#        os.kill(1, signal.SIGHUP)
 
 # ---------------------------------------------------------
 # Top-level functions called by ContainerPilot or forked by this program
@@ -142,40 +142,47 @@ def health():
     # make sure this node has a valid consul session to work with
     get_session()
 
-    #  - check for primary in replset and consul
-    is_mongo_primary = local_mongo.is_primary
-    consul_primary = get_primary_node_from_consul()
-
-    # no master in consul, and I am not master in mongo
-    if not consul_primary and not is_mongo_primary:
-        # check if this is already a replica set ['ok']
-        try:
-            repl_status = local_mongo.admin.command('replSetGetStatus')
-        except OperationFailure as e:
-            log.debug(e)
-            # this should only happen at the beginning when there is no replica set yet
-            # so the first node to get the lock in consul will initialize the set
-            # try setting self as primary in consul and rs.init()
-            mark_as_primary(hostname)
-            local_mongo.admin.command('replSetInitiate')
-    # otherwise let mongo elect a new master and it will mark itself in consul
-
-    #  if I am primary, make sure all nodes are in the replset config
-    if is_mongo_primary:
-        state = PRIMARY
-        mongo_update_replset_config(local_mongo, hostname)
-    else:
-        state = SECONDARY
-
     try:
-        # ensure ContainerPilot knows the correct config
-        cp = ContainerPilot()
-        if cp.update(state):
-            cp.reload()
+        repl_status = local_mongo.admin.command('replSetGetStatus')
+        # TODO handle non-exceptional states
+#        if repl_status['myState'] == 1:
+#            # ref https://docs.mongodb.com/manual/reference/replica-states/
+#            state = PRIMARY
+#            # mongo_update_replset_config is not required in the health check
+#            # but may speed up adding of new members
+#            # dropping to keep consul traffic minimal
+#            #mongo_update_replset_config(local_mongo, hostname)
+#        elif repl_status['myState'] in (2, 3, 5):
+#            # mongo states of: SECONDARY or RECOVERING or STARTUP2
+#            state = SECONDARY
+    except OperationFailure as e:
+        # happens when replica set is not initialized
+        log.debug(e)
+        consul_primary = get_primary_node_from_consul()
+        if not consul_primary:
+            # this should only happen at the beginning when there is no replica set
+            # so the first node to get the lock in consul will initialize the set
+            # by setting self as primary in consul and then rs.init()
+            mark_as_primary(hostname)
+            #state = PRIMARY
+            local_mongo.admin.command('replSetInitiate')
+        else:
+            # this happens when the primary node is still initializing
+            # wait for it to finish so that it can add this node to the replica set
+            # while waiting, we are a "healthy" node, since mongo is responsive
+            # TODO maybe make this a second state of "recovering/initializing" node?
+            return True
 
-    except Exception as e:
-        log.exception(e)
-        sys.exit(1)
+    # TODO reload ContainerPilot when we have more than one state
+    #try:
+    #    # ensure ContainerPilot knows the correct config
+    #    cp = ContainerPilot()
+    #    if cp.update(state):
+    #        cp.reload()
+
+    #except Exception as e:
+    #    log.exception(e)
+    #    sys.exit(1)
 
     return True
 
@@ -196,6 +203,8 @@ def on_change():
 
     if is_mongo_primary:
         mongo_update_replset_config(local_mongo, hostname)
+    else:
+        return True
 
 # ---------------------------------------------------------
 
@@ -289,22 +298,29 @@ def mongo_update_replset_config(local_mongo, hostname):
                     'host': host,
                 })
 
+        # TODO voting membership
+        # https://docs.mongodb.com/manual/core/replica-set-architectures/#maximum-number-of-voting-members
+        # ERROR manage.py Replica set configuration contains 10 voting members, but must be at least 1 and no more than 7
+        # it should also be odd for tie breaking
+        # also limit number of nodes to 50, since that is all a replica set can have
+
         # update mongo replica config with the new list if there are changes
         if changed:
             repl_config['members'] = new_members
             repl_config['version'] += 1
             local_mongo.admin.command('replSetReconfig', repl_config)
             log.info('updating replica config in mongo from consul info')
+            return repl_config
 
     except Exception as e:
         log.exception(e)
         sys.exit(1)
 
 def consul_to_mongo_hostname(name):
+#    if name.startswith(SECONDARY + '-'):
+#        prefix = SECONDARY + '-'
     if name.startswith(PRIMARY + '-'):
         prefix = PRIMARY + '-'
-    elif name.startswith(SECONDARY + '-'):
-        prefix = SECONDARY + '-'
     else:
         return None
 
@@ -371,7 +387,7 @@ def get_session(no_cache=False):
 
     return session_id
 
-def create_session(ttl=SESSION_TTL):
+def create_session(ttl=None):
     """
     We can't rely on storing Consul session IDs in memory because
     `health` and `onChange` handler calls happen in a subsequent

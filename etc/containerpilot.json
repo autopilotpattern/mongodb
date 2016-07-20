@@ -12,7 +12,7 @@
   ],
   "backends": [
     {
-      "name": "mongodb-primary",
+      "name": "mongodb-replicaset",
       "poll": 10,
       "onChange": "python /usr/local/bin/manage.py on_change"
     }
