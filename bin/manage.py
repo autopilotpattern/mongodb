@@ -116,11 +116,50 @@ MONGO_RETRY_TIMES=int(get_environ('MONGO_RETRY_TIMES', 10))
 def pre_start():
     """
     MongoDB must be running in order to execute most of our setup behavior
-    so we're just going to make sure the directory structures are in
-    place and then let the first health check handler take it from there
     """
     # TODO is there anything that needs to be done before starting mongo?
     sys.exit(0)
+
+@debug
+def pre_stop():
+    """
+    If we are the primary in the MongoDB replica set, we need to step down
+    because we are about to be shut down
+    """
+
+    ip = get_ip()
+    local_mongo = MongoClient(ip, connect=False)
+
+    # since we are shutting down, it is ok to stop if mongo is already non-responsive
+    if not is_mongo_up(local_mongo):
+        return True
+
+    try:
+        repl_status = local_mongo.admin.command('replSetGetStatus')
+        is_mongo_primary = repl_status['myState'] == 1
+        # ref https://docs.mongodb.com/manual/reference/replica-states/
+    except Exception as e:
+        log.error(e, 'unable to get primary status while shuting down')
+        return True
+
+    if is_mongo_primary:
+        # the primary will wait up to X seconds for a secondary member
+        # to catch up and sets itself as ineligible to be primary again for 60 seconds
+        # https://docs.mongodb.com/manual/reference/command/replSetStepDown/i
+        # this is set to 8 so that we timeout before `docker stop` would send a sigkill
+        try:
+            # TODO stepdown times in ENV vars
+            local_mongo.admin.command('replSetStepDown', 60, secondaryCatchUpPeriodSecs=8)
+        except ExecutionTimeout as e:
+            # stepdown fails, ie no secondary that is caught up
+            log.debug(e)
+            try:
+                # force
+                local_mongo.admin.command('replSetStepDown', 60, force=True)
+            except ConnectionFailure:
+                pass
+
+    return True
 
 @debug
 def health():
@@ -135,7 +174,7 @@ def health():
     ip = get_ip()
     local_mongo = MongoClient(ip, connect=False)
 
-    #  - check that mongo is responsive
+    # check that mongo is responsive
     if not is_mongo_up(local_mongo):
         return False
 
@@ -196,13 +235,15 @@ def on_change():
     local_mongo = MongoClient(ip, connect=False)
 
     try:
-        is_mongo_primary = local_mongo.is_primary
+        repl_status = local_mongo.admin.command('replSetGetStatus')
+        is_mongo_primary = repl_status['myState'] == 1
+        # ref https://docs.mongodb.com/manual/reference/replica-states/
     except Exception as e:
         log.error(e, 'unable to get primary status')
-        sys.exit(1)
+        return False
 
     if is_mongo_primary:
-        mongo_update_replset_config(local_mongo, hostname)
+        return mongo_update_replset_config(local_mongo, hostname)
     else:
         return True
 
@@ -260,43 +301,36 @@ def mongo_update_replset_config(local_mongo, hostname):
 
         # translate the name stored by consul to be the "host" name stored
         # in mongo config, skipping any non-mongo services
-        mongos_in_consul = []
-        for x in consul_services:
-            host = consul_to_mongo_hostname(consul_services[x]['ID'])
-            if host:
-                mongos_in_consul.append(host)
+        mongos_in_consul = [consul_to_mongo_hostname(svc) for svc in consul_services]
+        mongos_in_consul = [svc for svc in mongos_in_consul if svc]
         # empty list from consul means we have nothing to compare against
-        if not len(mongos_in_consul):
+        if not mongos_in_consul:
             return
         # if the master node is not in the consul services list we need to
         # wait a little longer before configuring mongo
         if not hostname + ':27017' in mongos_in_consul:
             return
 
-        max_id = 0
-        changed = False
-        new_members = []
-        # loop over members in mongo replica config
-        for member in repl_config['members']:
-            if member['_id'] > max_id:
-                # find the max `-id` for adding new members later
-                max_id = member['_id']
-            if member['host'] in mongos_in_consul:
-                # this member is also in consul confg so keep it
-                mongos_in_consul.remove(member['host'])
-                new_members.append(member)
-            else:
-                # this member is not in consul, it will be removed from mongo config
-                changed = True
+        members = repl_config['members']
+        existing_hosts, ids = zip(*[(member['host'], member['_id']) for member in members])
+        ids = list(ids)
+        existing = set(existing_hosts)
+        current = set(mongos_in_consul)
 
-        # add mongo servers that are listed in consul, but not yet in mongo config
-        for host in mongos_in_consul:
-            changed = True
-            max_id += 1
-            new_members.append({
-                    '_id': max_id,
-                    'host': host,
-                })
+        new_mongos = current - existing
+        stale_mongos = existing - current
+
+        if not new_mongos and not stale_mongos:
+            return # no change
+
+        # don't keep mongo replica members that are not listed in consul
+        for member in members:
+            if member['host'] in stale_mongos:
+                members.remove(member)
+        for new_mongo in new_mongos:
+            new_id = max(ids) + 1
+            ids.append(new_id)
+            members.append({'_id': new_id, 'host': new_mongo})
 
         # TODO voting membership
         # https://docs.mongodb.com/manual/core/replica-set-architectures/#maximum-number-of-voting-members
@@ -304,13 +338,12 @@ def mongo_update_replset_config(local_mongo, hostname):
         # it should also be odd for tie breaking
         # also limit number of nodes to 50, since that is all a replica set can have
 
-        # update mongo replica config with the new list if there are changes
-        if changed:
-            repl_config['members'] = new_members
-            repl_config['version'] += 1
-            local_mongo.admin.command('replSetReconfig', repl_config)
-            log.info('updating replica config in mongo from consul info')
-            return repl_config
+        repl_config['members'] = members
+        repl_config['version'] += 1
+        local_mongo.admin.command('replSetReconfig', repl_config)
+
+        log.info('updating replica config in mongo from consul info')
+        return repl_config
 
     except Exception as e:
         log.exception(e)
