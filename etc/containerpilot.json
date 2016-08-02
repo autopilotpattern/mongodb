@@ -2,7 +2,7 @@
   "consul": "{{ .CONSUL }}:8500",
   "preStart": "python /usr/local/bin/manage.py",
   "preStop": "python /usr/local/bin/manage.py pre_stop",
-  "stopTimeout": 9,
+  "stopTimeout": {{.STOP_TIMEOUT}},
   "services": [
     {
       "name": "mongodb-replicaset",

@@ -9,7 +9,7 @@ RUN apt-get update \
 		libffi-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
-# get Python drivers MySQL, Consul, and Manta
+# get Python drivers MongoDB, Consul, and Manta
 RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 	python get-pip.py && \
 	pip install \
@@ -27,6 +27,11 @@ RUN export CONTAINERPILOT_CHECKSUM=a4dd6bc001c82210b5c33ec2aa82d7ce83245154 \
 	&& echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
 	&& tar zxf /tmp/containerpilot.tar.gz -C /usr/local/bin \
 	&& rm /tmp/containerpilot.tar.gz
+
+# add stopping timeouts for ContainerPilot and MongoDB
+ENV STOP_TIMEOUT 9
+ENV MONGO_SECONDARY_CATCHUP_PERIOD 8
+ENV MONGO_STEPDOWN_TIME 60
 
 # configure ContainerPilot and MySQL
 COPY etc/* /etc/

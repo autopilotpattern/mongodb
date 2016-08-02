@@ -76,6 +76,10 @@ PRIMARY_KEY = get_environ('PRIMARY_KEY', 'mongodb-primary')
 # be aware that the health check may timeout before this is reached
 MONGO_RETRY_TIMES=int(get_environ('MONGO_RETRY_TIMES', 10))
 
+# timeouts when the primary node gets a SIGTERM and needs to step down as primary
+MONGO_STEPDOWN_TIME=int(get_environ('MONGO_STEPDOWN_TIME', 60))
+MONGO_SECONDARY_CATCHUP_PERIOD=int(get_environ('MONGO_SECONDARY_CATCHUP_PERIOD', 8))
+
 # ---------------------------------------------------------
 
 #class ContainerPilot(object):
@@ -145,18 +149,18 @@ def pre_stop():
     if is_mongo_primary:
         # the primary will wait up to X seconds for a secondary member
         # to catch up and sets itself as ineligible to be primary again for 60 seconds
-        # https://docs.mongodb.com/manual/reference/command/replSetStepDown/i
+        # https://docs.mongodb.com/manual/reference/command/replSetStepDown/
         # this is set to 8 so that we timeout before `docker stop` would send a sigkill
         try:
-            # TODO stepdown times in ENV vars
-            local_mongo.admin.command('replSetStepDown', 60, secondaryCatchUpPeriodSecs=8)
+            local_mongo.admin.command('replSetStepDown', MONGO_STEPDOWN_TIME, secondaryCatchUpPeriodSecs=MONGO_SECONDARY_CATCHUP_PERIOD)
         except ExecutionTimeout as e:
             # stepdown fails, ie no secondary that is caught up
             log.debug(e)
             try:
                 # force
-                local_mongo.admin.command('replSetStepDown', 60, force=True)
+                local_mongo.admin.command('replSetStepDown', MONGO_STEPDOWN_TIME, force=True)
             except ConnectionFailure:
+                # this means mongo closed all connections and is not primary
                 pass
 
     return True
