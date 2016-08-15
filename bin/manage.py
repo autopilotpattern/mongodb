@@ -79,6 +79,7 @@ MONGO_RETRY_TIMES=int(get_environ('MONGO_RETRY_TIMES', 10))
 # timeouts when the primary node gets a SIGTERM and needs to step down as primary
 MONGO_STEPDOWN_TIME=int(get_environ('MONGO_STEPDOWN_TIME', 60))
 MONGO_SECONDARY_CATCHUP_PERIOD=int(get_environ('MONGO_SECONDARY_CATCHUP_PERIOD', 8))
+MONGO_ELECTION_TIMEOUT=int(get_environ('MONGO_ELECTION_TIMEOUT', 30))
 
 # ---------------------------------------------------------
 
@@ -153,6 +154,9 @@ def pre_stop():
         # this is set to 8 so that we timeout before `docker stop` would send a sigkill
         try:
             local_mongo.admin.command('replSetStepDown', MONGO_STEPDOWN_TIME, secondaryCatchUpPeriodSecs=MONGO_SECONDARY_CATCHUP_PERIOD)
+        except ConnectionFailure:
+            # this means mongo closed all connections and this node is no longer primary
+            wait_for_election = True
         except ExecutionTimeout as e:
             # stepdown fails, ie no secondary that is caught up
             log.debug(e)
@@ -160,8 +164,24 @@ def pre_stop():
                 # force
                 local_mongo.admin.command('replSetStepDown', MONGO_STEPDOWN_TIME, force=True)
             except ConnectionFailure:
-                # this means mongo closed all connections and is not primary
-                pass
+                # this means mongo closed all connections and this node is no longer primary
+                wait_for_election = True
+
+        if wait_for_election:
+            timeout = 0
+            while True:
+                if timeout >= MONGO_ELECTION_TIMEOUT:
+                    log.error('did not see mongodb election results of new primary after %i times' % timeout)
+                    return False
+                timeout += 1
+                # use a replica client so that we get "primary" data
+                mongo_client = MongoClient(ip, connect=False, replicaset=repl_status['set'], serverSelectionTimeoutMS=500)
+                # is_mongo_up will sleep on failure, so we don't need a "time.sleep(1)"
+                if is_mongo_up(mongo_client, 1):
+                    primary = mongo_client.primary
+                    if primary != None:
+                        log.debug('primary elected: {0!s}'.format(primary))
+                        return True
 
     return True
 
