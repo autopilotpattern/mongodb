@@ -253,32 +253,35 @@ def on_change():
 
 # ---------------------------------------------------------
 
-def is_mongo_up(local_mongo, timeout=MONGO_RETRY_TIMES):
+def is_mongo_up(local_mongo, max_timeout=MONGO_RETRY_TIMES):
     '''
     check to see if mongo is up yet, retying the given number of times
     '''
-    
+    timeout = 0
+    ip = get_ip()
     while True:
-        timeout -= 1
-        if timeout <= 0:
-            log.errors('unable to connect to mongodb after %i times' % MONGO_RETRY_TIMES)
+        if timeout >= max_timeout:
+            if timeout != 1:
+                log.error('unable to connect to mongodb or replica set after %i times' % timeout)
             return False
+        timeout += 1
 
         try:
             # check that mongo is up
             server_info = local_mongo.server_info()
             if not server_info['ok']:
                 log.info('Mongo response not "ok" on %s; retrying...' % ip)
-                sleep(1)
+                time.sleep(1)
                 continue
             break
         except (AutoReconnect, ServerSelectionTimeoutError) as e:
-            log.info('Mongo not yet available on %s; retrying...' % ip)
-            sleep(1)
+            log.info('Mongo or specified replica set not yet available on %s; retrying...' % ip)
+            time.sleep(1)
             continue
         except (ConnectionFailure, NetworkTimeout, NotMasterError) as e:
             # TODO retry like AutoReconnect error above?
             log.info(e)
+            time.sleep(1)
             return False
         except Exception as e:
             # just bail on unexpected exceptions when trying to connect
