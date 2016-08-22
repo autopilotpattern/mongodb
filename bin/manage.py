@@ -82,39 +82,6 @@ MONGO_SECONDARY_CATCHUP_PERIOD=int(get_environ('MONGO_SECONDARY_CATCHUP_PERIOD',
 MONGO_ELECTION_TIMEOUT=int(get_environ('MONGO_ELECTION_TIMEOUT', 30))
 
 # ---------------------------------------------------------
-
-#class ContainerPilot(object):
-#    """
-#    ContainerPilot config is where we rewrite ContainerPilot's own config
-#    so that we can dynamically alter what service we advertise
-#    """
-#
-#    def __init__(self):
-#        # TODO: we should make sure we can support JSON-in-env-var
-#        # the same as ContainerPilot itself
-#        self.path = get_environ('CONTAINERPILOT', None).replace('file://', '')
-#        with open(self.path, 'r') as f:
-#            self.config = json.loads(f.read())
-#
-#    @debug
-#    def update(self, state):
-#        if state and self.config['services'][0]['name'] != state:
-#            self.config['services'][0]['name'] = state
-#            self.render()
-#            return True
-#
-#    @debug
-#    def render(self):
-#        new_config = json.dumps(self.config)
-#        with open(self.path, 'w') as f:
-#            f.write(new_config)
-#
-#    def reload(self):
-#        """ force ContainerPilot to reload its configuration """
-#        log.info('Reloading ContainerPilot configuration.')
-#        os.kill(1, signal.SIGHUP)
-
-# ---------------------------------------------------------
 # Top-level functions called by ContainerPilot or forked by this program
 
 @debug
@@ -235,17 +202,6 @@ def health():
             # while waiting, we are a "healthy" node, since mongo is responsive
             # TODO maybe make this a second state of "recovering/initializing" node?
             return True
-
-    # TODO reload ContainerPilot when we have more than one state
-    #try:
-    #    # ensure ContainerPilot knows the correct config
-    #    cp = ContainerPilot()
-    #    if cp.update(state):
-    #        cp.reload()
-
-    #except Exception as e:
-    #    log.exception(e)
-    #    sys.exit(1)
 
     return True
 
