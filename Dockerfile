@@ -28,8 +28,7 @@ RUN export CONTAINERPILOT_CHECKSUM=a4dd6bc001c82210b5c33ec2aa82d7ce83245154 \
 	&& tar zxf /tmp/containerpilot.tar.gz -C /usr/local/bin \
 	&& rm /tmp/containerpilot.tar.gz
 
-# add stopping timeouts for ContainerPilot and MongoDB
-ENV STOP_TIMEOUT 9
+# add stopping timeouts for MongoDB
 ENV MONGO_SECONDARY_CATCHUP_PERIOD 8
 ENV MONGO_STEPDOWN_TIME 60
 ENV MONGO_ELECTION_TIMEOUT 30

@@ -25,6 +25,10 @@ In a few moments you'll have a running MongoDB ready for a replica set. Both the
 Pass these variables via an `_env` file.
 
 - `LOG_LEVEL`: control the amount of logging from ContainerPilot
+- when the primary node is sent a `SIGTERM` it will [step down](https://docs.mongodb.com/manual/reference/command/replSetStepDown/) as primary; the following control those timeouts
+  - `MONGO_SECONDARY_CATCHUP_PERIOD`: the number of seconds that the mongod will wait for an electable secondary to catch up to the primary
+  - `MONGO_STEPDOWN_TIME`: the number of seconds to step down the primary, during which time the stepdown member is ineligible for becoming primary
+  - `MONGO_ELECTION_TIMEOUT`: after the primary steps down, the amount a tries to check that a new primary has been elected before the node shuts down
 
 Not yet implemented:
 - `MANTA_URL`: the full Manta endpoint URL. (ex. `https://us-east.manta.joyent.com`)
