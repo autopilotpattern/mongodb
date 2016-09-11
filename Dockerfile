@@ -7,6 +7,7 @@ RUN apt-get update \
 		gcc \
 		curl \
 		libffi-dev \
+		libssl-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
 # get Python drivers MongoDB, Consul, and Manta
