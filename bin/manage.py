@@ -223,7 +223,7 @@ def on_change():
         return False
 
     if is_mongo_primary:
-        return mongo_update_replset_config(local_mongo, hostname)
+        return mongo_update_replset_config(local_mongo, ip)
     else:
         return True
 
@@ -277,14 +277,14 @@ def mongo_update_replset_config(local_mongo, hostname):
         if not repl_config['ok']:
             raise Exception('could not get replica config: %s' % repl_config['errmsg'])
         repl_config = repl_config['config']
-        
+
         # TODO use consul.agent.health() instead?
         # get list of mongo servers from consul
         consul_services = consul.agent.services()
 
         # translate the name stored by consul to be the "host" name stored
         # in mongo config, skipping any non-mongo services
-        mongos_in_consul = [consul_to_mongo_hostname(svc) for svc in consul_services]
+        mongos_in_consul = [consul_to_mongo_hostname(consul_services[svc]) for svc in consul_services]
         mongos_in_consul = [svc for svc in mongos_in_consul if svc]
         # empty list from consul means we have nothing to compare against
         if not mongos_in_consul:
@@ -332,16 +332,13 @@ def mongo_update_replset_config(local_mongo, hostname):
         log.exception(e)
         sys.exit(1)
 
-def consul_to_mongo_hostname(name):
+def consul_to_mongo_hostname(service):
 #    if name.startswith(SECONDARY + '-'):
 #        prefix = SECONDARY + '-'
-    if name.startswith(PRIMARY + '-'):
-        prefix = PRIMARY + '-'
+    if service['ID'].startswith(PRIMARY + '-'):
+        return service['Address'] + ':' + str(service['Port'])
     else:
         return None
-
-    name = name[len(prefix):] + ':27017'
-    return name
 
 # ---------------------------------------------------------
 
@@ -393,7 +390,7 @@ def get_session(no_cache=False):
     try:
         with open(SESSION_CACHE_FILE, 'r') as f:
             session_id = f.read()
-        
+
         # ensure the session_id is valid and refresh it
         consul.session.renew(session_id)
     except (IOError, pyconsul.base.NotFound) as e:
