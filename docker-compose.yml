@@ -1,0 +1,21 @@
+version: '2'
+services:
+    mongodb:
+        extends:
+            file: local-compose.yml
+            service: mongodb
+        mem_limit: 4g
+        labels:
+            - triton.cns.services=mongodb
+        network_mode: bridge
+
+    consul:
+        extends:
+            file: local-compose.yml
+            service: consul
+        labels:
+            - triton.cns.services=consul
+        network_mode: bridge
+        dns:
+            - 127.0.0.1
+
