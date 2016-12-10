@@ -29,6 +29,7 @@ Pass these variables via an `_env` file.
   - `MONGO_SECONDARY_CATCHUP_PERIOD`: the number of seconds that the mongod will wait for an electable secondary to catch up to the primary
   - `MONGO_STEPDOWN_TIME`: the number of seconds to step down the primary, during which time the stepdown member is ineligible for becoming primary
   - `MONGO_ELECTION_TIMEOUT`: after the primary steps down, the amount a tries to check that a new primary has been elected before the node shuts down
+- `CONSUL` (optional): when using `local-compose.yml`, this will default to `consul` (and thus use the DNS provided by Docker), but for deploying on Triton via `docker-compose.yml`, this should be set to [the CNS path of the `consul` service (`consul.svc.XXX...`)](https://docs.joyent.com/public-cloud/network/cns)
 
 Not yet implemented:
 - `MANTA_URL`: the full Manta endpoint URL. (ex. `https://us-east.manta.joyent.com`)
