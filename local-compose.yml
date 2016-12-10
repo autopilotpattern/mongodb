@@ -7,8 +7,6 @@ services:
         mem_limit: 512m
         build: .
         env_file: _env
-        environment:
-            - CONSUL=consul
         ports:
             - 27017
 
