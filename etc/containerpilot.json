@@ -1,5 +1,5 @@
 {
-  "consul": "{{ .CONSUL }}:8500",
+  "consul": "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}:8500",
   "preStart": "python /usr/local/bin/manage.py",
   "preStop": "python /usr/local/bin/manage.py pre_stop",
   "services": [
