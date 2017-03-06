@@ -8,6 +8,7 @@ RUN apt-get update \
 		curl \
 		libffi-dev \
 		libssl-dev \
+                unzip \
 	&& rm -rf /var/lib/apt/lists/*
 
 # get Python drivers MongoDB, Consul, and Manta
@@ -18,6 +19,15 @@ RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 		python-Consul==0.4.7 \
 		manta==2.5.0 \
 		mock==2.0.0
+
+# Add consul agent
+RUN export CONSUL_VERSION=0.7.2 \
+    && export CONSUL_CHECKSUM=aa97f4e5a552d986b2a36d48fdc3a4a909463e7de5f726f3c5a89b8a1be74a58 \
+    && curl --retry 7 --fail -vo /tmp/consul.zip "https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip" \
+    && echo "${CONSUL_CHECKSUM}  /tmp/consul.zip" | sha256sum -c \
+    && unzip /tmp/consul -d /usr/local/bin \
+    && rm /tmp/consul.zip \
+    && mkdir -p /opt/consul/config
 
 # Add ContainerPilot and set its configuration file path
 ENV CONTAINERPILOT_VER 2.0.1
@@ -39,11 +49,6 @@ COPY etc/* /etc/
 COPY bin/* /usr/local/bin/
 
 # override the parent entrypoint
-ENTRYPOINT []
+ENTRYPOINT ["containerpilot", "mongod"]
 
-CMD [ \
-	"containerpilot", \
-	"mongod", \
-	"--replSet=joyent" \
-]
-
+CMD ["--replSet=joyent"]

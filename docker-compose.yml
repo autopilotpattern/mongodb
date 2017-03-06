@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 services:
     mongodb:
         extends:
@@ -7,6 +7,8 @@ services:
         mem_limit: 4g
         labels:
             - triton.cns.services=mongodb
+        links:
+          - consul:consul
         network_mode: bridge
 
     consul:
@@ -18,4 +20,3 @@ services:
         network_mode: bridge
         dns:
             - 127.0.0.1
-

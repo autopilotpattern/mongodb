@@ -1,5 +1,5 @@
 {
-  "consul": "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}:8500",
+  "consul": "localhost:8500",
   "preStart": "python /usr/local/bin/manage.py",
   "preStop": "python /usr/local/bin/manage.py pre_stop",
   "services": [
@@ -16,6 +16,18 @@
       "name": "mongodb-replicaset",
       "poll": 10,
       "onChange": "python /usr/local/bin/manage.py on_change"
+    }
+  ],
+  "coprocesses": [
+    {
+      "command": ["/usr/local/bin/consul", "agent",
+                  "-data-dir=/opt/consul/data",
+                  "-config-dir=/opt/consul/config",
+                  "-rejoin",
+                  "-retry-join", "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}",
+                  "-retry-max", "10",
+                  "-retry-interval", "10s"],
+      "restarts": "unlimited"
     }
   ]
 }
