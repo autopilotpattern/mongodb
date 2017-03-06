@@ -48,7 +48,7 @@ ENV MONGO_ELECTION_TIMEOUT 30
 COPY etc/* /etc/
 COPY bin/* /usr/local/bin/
 
-# override the parent entrypoint
 ENTRYPOINT ["containerpilot", "mongod"]
 
+# Define CMD so the name of the replicaset can be overridden in the compose file
 CMD ["--replSet=joyent"]
