@@ -21,8 +21,8 @@ RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 		mock==2.0.0
 
 # Add consul agent
-RUN export CONSUL_VERSION=0.7.2 \
-    && export CONSUL_CHECKSUM=aa97f4e5a552d986b2a36d48fdc3a4a909463e7de5f726f3c5a89b8a1be74a58 \
+RUN export CONSUL_VERSION=0.7.5 \
+    && export CONSUL_CHECKSUM=40ce7175535551882ecdff21fdd276cef6eaab96be8a8260e0599fadb6f1f5b8 \
     && curl --retry 7 --fail -vo /tmp/consul.zip "https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip" \
     && echo "${CONSUL_CHECKSUM}  /tmp/consul.zip" | sha256sum -c \
     && unzip /tmp/consul -d /usr/local/bin \
