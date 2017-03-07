@@ -10,6 +10,7 @@ import sys
 import time
 
 from functools import wraps
+from urllib import quote_plus
 
 import consul as pyconsul
 #import manta
@@ -65,6 +66,9 @@ SESSION_CACHE_FILE = get_environ('SESSION_CACHE_FILE', '/tmp/mongodb-session')
 SESSION_NAME = get_environ('SESSION_NAME', 'mongodb-replica-set-lock')
 SESSION_TTL = int(get_environ('SESSION_TTL', 60))
 
+MONGO_USER = get_environ('MONGO_USER', 'admin')
+MONGO_PASSWORD = get_environ('MONGO_PASSWORD', 'admin')
+
 # consts for node state
 PRIMARY = 'mongodb-replicaset'
 #SECONDARY = 'mongodb-secondary'
@@ -99,8 +103,7 @@ def pre_stop():
     because we are about to be shut down
     """
 
-    ip = get_ip()
-    local_mongo = MongoClient(ip, connect=False)
+    local_mongo = get_local_mongo()
 
     # since we are shutting down, it is ok to stop if mongo is already non-responsive
     if not is_mongo_up(local_mongo):
@@ -142,7 +145,7 @@ def pre_stop():
                     return False
                 timeout += 1
                 # use a replica client so that we get "primary" data
-                mongo_client = MongoClient(ip, connect=False, replicaset=repl_status['set'], serverSelectionTimeoutMS=500)
+                mongo_client = MongoClient(get_local_mongo_uri(), connect=False, replicaset=repl_status['set'], serverSelectionTimeoutMS=500)
                 # is_mongo_up will sleep on failure, so we don't need a "time.sleep(1)"
                 if is_mongo_up(mongo_client, 1):
                     primary = mongo_client.primary
@@ -162,8 +165,7 @@ def health():
     # TODO periodic mongodumps to Manta
 
     hostname = socket.gethostname()
-    ip = get_ip()
-    local_mongo = MongoClient(ip, connect=False)
+    local_mongo = get_local_mongo()
 
     # check that mongo is responsive
     if not is_mongo_up(local_mongo):
@@ -212,7 +214,7 @@ def on_change():
     '''
     hostname = socket.gethostname()
     ip = get_ip()
-    local_mongo = MongoClient(ip, connect=False)
+    local_mongo = get_local_mongo()
 
     try:
         repl_status = local_mongo.admin.command('replSetGetStatus')
@@ -313,7 +315,8 @@ def mongo_update_replset_config(local_mongo, hostname):
         for new_mongo in new_mongos:
             new_id = max(ids) + 1
             ids.append(new_id)
-            members.append({'_id': new_id, 'host': new_mongo})
+            host = "mongodb://%s:%s@%s" % (quote_plus(MONGO_USER), quote_plus(MONGO_PASSWORD), new_mongo)
+            members.append({'_id': new_id, 'host': host})
 
         # TODO voting membership
         # https://docs.mongodb.com/manual/core/replica-set-architectures/#maximum-number-of-voting-members
@@ -331,6 +334,19 @@ def mongo_update_replset_config(local_mongo, hostname):
     except Exception as e:
         log.exception(e)
         sys.exit(1)
+
+
+def get_local_mongo_uri():
+    ip = get_ip()
+    uri = "mongodb://%s:%s@%s" % (quote_plus(MONGO_USER), quote_plus(MONGO_PASSWORD), ip)
+
+    return uri
+
+def get_local_mongo():
+    local_mongo = MongoClient(get_local_mongo_uri(), connect=False)
+
+    return local_mongo
+
 
 def consul_to_mongo_hostname(service):
 #    if name.startswith(SECONDARY + '-'):
