@@ -1,4 +1,4 @@
-FROM mongo:3.2
+FROM mongo:3.4
 
 RUN apt-get update \
 	&& apt-get install -y \
@@ -6,6 +6,7 @@ RUN apt-get update \
 		python-dev \
 		gcc \
 		curl \
+		netcat \
 		libffi-dev \
 		libssl-dev \
 	&& rm -rf /var/lib/apt/lists/*
@@ -44,6 +45,6 @@ ENTRYPOINT []
 CMD [ \
 	"containerpilot", \
 	"mongod", \
-	"--replSet=joyent" \
+	"--replSet=joyent", \
+	"--auth" \
 ]
-
