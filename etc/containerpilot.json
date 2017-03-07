@@ -1,6 +1,6 @@
 {
   "consul": "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}:8500",
-  "preStart": "./usr/local/bin/setup_user.sh && python /usr/local/bin/manage.py",
+  "preStart": "./usr/local/bin/setup_mongo.sh && python /usr/local/bin/manage.py",
   "preStop": "python /usr/local/bin/manage.py pre_stop",
   "services": [
     {

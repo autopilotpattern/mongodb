@@ -3,13 +3,16 @@ set -e -o pipefail
 
 help() {
     echo
-    echo 'Usage ./setup.sh ~/path/to/MANTA_PRIVATE_KEY'
+    echo 'Usage ./setup.sh ~/path/to/MANTA_PRIVATE_KEY ~/path/to/MONGO_KEYFILE'
     echo
     echo 'Checks that your Triton and Docker environment is sane and configures'
     echo 'an environment file to use.'
     echo
     echo 'MANTA_PRIVATE_KEY is the filesystem path to an SSH private key'
     echo 'used to connect to Manta for the database backups.'
+    echo
+    echo 'MONGO_KEYFILE is the filesystem path to a file that contains a secret'
+    echo 'value between 6 and 1024 characters for authenticating replica members'
     echo
     echo 'Additional details must be configured in the _env file, but this script will properly'
     echo 'encode the SSH key details for use with this MongoDB image.'
@@ -48,8 +51,29 @@ envcheck() {
         exit 1
     fi
 
+    if [ -z "$2" ]; then
+        tput rev  # reverse
+        tput bold # bold
+        echo 'Please provide a path to a key file for MongoDB replica members.'
+        tput sgr0 # clear
+
+        help
+        exit 1
+    fi
+
+    if [ ! -f "$2" ]; then
+        tput rev  # reverse
+        tput bold # bold
+        echo 'MongoDB replica key file is unreadable.'
+        tput sgr0 # clear
+
+        help
+        exit 1
+    fi
+
     # Assign args to named vars
     MANTA_PRIVATE_KEY_PATH=$1
+    MONGO_KEYFILE_PATH=$2
 
     command -v docker >/dev/null 2>&1 || {
         echo
@@ -116,6 +140,7 @@ envcheck() {
         echo '# Environment variables for MongoDB service' > _env
         echo 'MONGO_USER=dbuser' >> _env
         echo 'MONGO_PASSWORD='$(cat /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 7) >> _env
+        echo MONGO_KEY=$(cat ${MONGO_KEYFILE_PATH} | tr '\n' '#') >> _env
         echo >> _env
 
         echo '# Environment variables for backups to Manta' >> _env

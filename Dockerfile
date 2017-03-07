@@ -45,6 +45,6 @@ ENTRYPOINT []
 CMD [ \
 	"containerpilot", \
 	"mongod", \
-	"--replSet=joyent", \
-	"--auth" \
+	"--config", \
+	"/etc/mongod.conf" \
 ]

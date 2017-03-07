@@ -315,8 +315,8 @@ def mongo_update_replset_config(local_mongo, hostname):
         for new_mongo in new_mongos:
             new_id = max(ids) + 1
             ids.append(new_id)
-            host = "mongodb://%s:%s@%s" % (quote_plus(MONGO_USER), quote_plus(MONGO_PASSWORD), new_mongo)
-            members.append({'_id': new_id, 'host': host})
+
+            members.append({'_id': new_id, 'host': new_mongo})
 
         # TODO voting membership
         # https://docs.mongodb.com/manual/core/replica-set-architectures/#maximum-number-of-voting-members
