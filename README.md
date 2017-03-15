@@ -9,6 +9,7 @@ A running cluster includes the following components:
 - [MongoDB](https://www.mongodb.com/community): we're using MongoDB 3.4 and setting up a [replica set](https://docs.mongodb.com/manual/replication/)
 - [Consul](https://www.consul.io/): used to coordinate replication and failover
 
+
 ## Running the cluster
 
 Starting a new cluster is easy once you have [your `_env` file set with the configuration details](#configuration)
@@ -25,6 +26,9 @@ In a few moments you'll have a running MongoDB ready for a replica set. Both the
 Pass these variables via an `_env` file.
 
 - `LOG_LEVEL`: control the amount of logging from ContainerPilot
+- `MONGO_USER`: the user that will be created as the default admin user
+- `MONGO_PASSWORD`: password to use for the admin user
+- `MONGO_KEY`: secret key contents to use for replica member authentication
 - when the primary node is sent a `SIGTERM` it will [step down](https://docs.mongodb.com/manual/reference/command/replSetStepDown/) as primary; the following control those timeouts
   - `MONGO_SECONDARY_CATCHUP_PERIOD`: the number of seconds that the mongod will wait for an electable secondary to catch up to the primary
   - `MONGO_STEPDOWN_TIME`: the number of seconds to step down the primary, during which time the stepdown member is ineligible for becoming primary
