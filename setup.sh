@@ -140,7 +140,7 @@ envcheck() {
         echo '# Environment variables for MongoDB service' > _env
         echo 'MONGO_USER=dbuser' >> _env
         echo 'MONGO_PASSWORD='$(cat /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 7) >> _env
-        echo MONGO_KEY=$(cat ${MONGO_KEYFILE_PATH} | tr '\n' '#') >> _env
+        echo MONGO_KEY=$(cut -c1-100 ${MONGO_KEYFILE_PATH} | tr '\n' '1' | tr '-' '1') >> _env
         echo >> _env
 
         echo '# Environment variables for backups to Manta' >> _env

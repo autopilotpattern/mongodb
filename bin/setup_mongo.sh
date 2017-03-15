@@ -2,6 +2,12 @@
 
 set -e
 
+
+if [ -d "/data/db/_mongosetup" ]; then
+  echo "/data/db/_mongosetup exists, mongo already setup, exiting"
+  exit 0
+fi
+
 echo "Start MongoDB without access control and only for local connections"
 mongod --fork --bind_ip 127.0.0.1 --logpath /dev/stdout
 
@@ -18,5 +24,5 @@ echo "Creating keyFile for replication."
 echo -e ${MONGO_KEY} > /etc/mongod.key
 chmod 400 /etc/mongod.key
 
-echo "Overwrite setup_mongo.sh so that this is a one-time setup"
-echo "#!/bin/bash" > ./setup_user.sh
+echo "Create directory to designate that setup is complete."
+mkdir -p /data/db/_mongosetup

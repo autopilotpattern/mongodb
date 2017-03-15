@@ -6,7 +6,6 @@ RUN apt-get update \
 		python-dev \
 		gcc \
 		curl \
-		netcat \
 		libffi-dev \
 		libssl-dev \
                 unzip \
