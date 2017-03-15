@@ -6,7 +6,7 @@
 
 A running cluster includes the following components:
 - [ContainerPilot](https://www.joyent.com/containerpilot): included in our MongoDB containers to orchestrate bootstrap behavior and coordinate replica joining using keys and checks stored in Consul in the `health`, and `onChange` handlers
-- [MongoDB](https://www.mongodb.com/community): we're using MongoDB 3.2 and setting up a [replica set](https://docs.mongodb.com/manual/replication/)
+- [MongoDB](https://www.mongodb.com/community): we're using MongoDB 3.4 and setting up a [replica set](https://docs.mongodb.com/manual/replication/)
 - [Consul](https://www.consul.io/): used to coordinate replication and failover
 
 ## Running the cluster
