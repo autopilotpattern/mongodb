@@ -15,7 +15,7 @@ A running cluster includes the following components:
 Starting a new cluster is easy once you have [your `_env` file set with the configuration details](#configuration)
 
 - for Triton, just run `docker-compose up -d`
-- for non-Triton, just run `docker-compose up -f local-compose.yml -d`
+- for non-Triton, just run `docker-compose -f local-compose.yml up -d`
 
 In a few moments you'll have a running MongoDB ready for a replica set. Both the master and replicas are described as a single `docker-compose` service. During startup, [ContainerPilot](http://containerpilot.io) will ask Consul if an existing master has been created. If not, the node will initialize as a new MongoDB replica set and all future nodes will be added to the replica set by the current master. All master election is handled by [MongoDB itself](https://docs.mongodb.com/manual/core/replica-set-elections/) and the result is cached in Consul.
 
