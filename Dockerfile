@@ -15,8 +15,8 @@ RUN apt-get update \
 RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 	python get-pip.py && \
 	pip install \
-		PyMongo==3.2.2 \
-		python-Consul==0.4.7 \
+		PyMongo==3.4.0 \
+		python-Consul==0.7.0 \
 		manta==2.5.0 \
 		mock==2.0.0
 
