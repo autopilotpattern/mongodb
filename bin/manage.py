@@ -16,7 +16,10 @@ import consul as pyconsul
 from pymongo import MongoClient
 from pymongo.errors import *
 
-consul = pyconsul.Consul(host=os.environ.get('CONSUL', 'consul'))
+CONSUL_AGENT = os.getenv('CONSUL_AGENT', False)
+CONSUL_HOST = ('localhost' if CONSUL_AGENT else os.getenv('CONSUL', 'consul'))
+
+consul = pyconsul.Consul(host=CONSUL_HOST)
 logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s',
                     stream=sys.stdout,
                     level=logging.getLevelName(
@@ -278,13 +281,12 @@ def mongo_update_replset_config(local_mongo, hostname):
             raise Exception('could not get replica config: %s' % repl_config['errmsg'])
         repl_config = repl_config['config']
 
-        # TODO use consul.agent.health() instead?
-        # get list of mongo servers from consul
-        consul_services = consul.agent.services()
+        # use consul health to get our healthy services
+        index, consul_services = consul.health.service(PRIMARY)
 
         # translate the name stored by consul to be the "host" name stored
         # in mongo config, skipping any non-mongo services
-        mongos_in_consul = [consul_to_mongo_hostname(consul_services[svc]) for svc in consul_services]
+        mongos_in_consul = [consul_to_mongo_hostname(svc['Service']) for svc in consul_services]
         mongos_in_consul = [svc for svc in mongos_in_consul if svc]
         # empty list from consul means we have nothing to compare against
         if not mongos_in_consul:

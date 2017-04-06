@@ -15,8 +15,8 @@ RUN apt-get update \
 RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 	python get-pip.py && \
 	pip install \
-		PyMongo==3.2.2 \
-		python-Consul==0.4.7 \
+		PyMongo==3.4.0 \
+		python-Consul==0.7.0 \
 		manta==2.5.0 \
 		mock==2.0.0
 
@@ -30,9 +30,9 @@ RUN export CONSUL_VERSION=0.7.5 \
     && mkdir -p /opt/consul/config
 
 # Add ContainerPilot and set its configuration file path
-ENV CONTAINERPILOT_VER 2.7.0
+ENV CONTAINERPILOT_VER 2.7.2
 ENV CONTAINERPILOT file:///etc/containerpilot.json
-RUN export CONTAINERPILOT_CHECKSUM=687f7d83e031be7f497ffa94b234251270aee75b \
+RUN export CONTAINERPILOT_CHECKSUM=e886899467ced6d7c76027d58c7f7554c2fb2bcc \
     && curl -Lso /tmp/containerpilot.tar.gz \
         "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VER}/containerpilot-${CONTAINERPILOT_VER}.tar.gz" \
     && echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
