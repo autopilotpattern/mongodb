@@ -1,5 +1,5 @@
 {
-  "consul": "localhost:8500",
+  "consul": "{{ if .CONSUL_AGENT }}localhost{{ else }}{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}{{ end }}:8500",
   "preStart": "python /usr/local/bin/manage.py",
   "preStop": "python /usr/local/bin/manage.py pre_stop",
   "services": [
@@ -18,7 +18,7 @@
       "onChange": "python /usr/local/bin/manage.py on_change"
     }
   ],
-  "coprocesses": [
+  "coprocesses": [{{ if .CONSUL_AGENT }}
     {
       "command": ["/usr/local/bin/consul", "agent",
                   "-data-dir=/opt/consul/data",
@@ -29,5 +29,5 @@
                   "-retry-interval", "10s"],
       "restarts": "unlimited"
     }
-  ]
+  {{ end }}]
 }
