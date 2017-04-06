@@ -16,7 +16,10 @@ import consul as pyconsul
 from pymongo import MongoClient
 from pymongo.errors import *
 
-consul = pyconsul.Consul(host='localhost')
+CONSUL_AGENT = os.getenv('CONSUL_AGENT', False)
+CONSUL_HOST = ('localhost' if CONSUL_AGENT else os.getenv('CONSUL', 'consul'))
+
+consul = pyconsul.Consul(host=CONSUL_HOST)
 logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s',
                     stream=sys.stdout,
                     level=logging.getLevelName(
