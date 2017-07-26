@@ -21,8 +21,8 @@ RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 		mock==2.0.0
 
 # Add consul agent
-RUN export CONSUL_VERSION=0.7.5 \
-    && export CONSUL_CHECKSUM=40ce7175535551882ecdff21fdd276cef6eaab96be8a8260e0599fadb6f1f5b8 \
+RUN export CONSUL_VERSION=0.9.0 \
+    && export CONSUL_CHECKSUM=33e54c7d9a93a8ce90fc87f74c7f787068b7a62092b7c55a945eea9939e8577f \
     && curl --retry 7 --fail -vo /tmp/consul.zip "https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip" \
     && echo "${CONSUL_CHECKSUM}  /tmp/consul.zip" | sha256sum -c \
     && unzip /tmp/consul -d /usr/local/bin \
@@ -30,9 +30,9 @@ RUN export CONSUL_VERSION=0.7.5 \
     && mkdir -p /opt/consul/config
 
 # Add ContainerPilot and set its configuration file path
-ENV CONTAINERPILOT_VER 2.7.2
-ENV CONTAINERPILOT file:///etc/containerpilot.json
-RUN export CONTAINERPILOT_CHECKSUM=e886899467ced6d7c76027d58c7f7554c2fb2bcc \
+ENV CONTAINERPILOT_VER 3.3.0
+ENV CONTAINERPILOT /etc/containerpilot.json
+RUN export CONTAINERPILOT_CHECKSUM=62621712ef6ba755e24805f616096de13e2fd087 \
     && curl -Lso /tmp/containerpilot.tar.gz \
         "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VER}/containerpilot-${CONTAINERPILOT_VER}.tar.gz" \
     && echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
@@ -48,7 +48,4 @@ ENV MONGO_ELECTION_TIMEOUT 30
 COPY etc/* /etc/
 COPY bin/* /usr/local/bin/
 
-ENTRYPOINT ["containerpilot", "mongod"]
-
-# Define CMD so the name of the replicaset can be overridden in the compose file
-CMD ["--replSet=joyent"]
+ENTRYPOINT ["containerpilot"]

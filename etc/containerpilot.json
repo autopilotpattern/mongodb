@@ -1,33 +1,54 @@
 {
   "consul": "{{ if .CONSUL_AGENT }}localhost{{ else }}{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}{{ end }}:8500",
-  "preStart": "python /usr/local/bin/manage.py",
-  "preStop": "python /usr/local/bin/manage.py pre_stop",
-  "services": [
+  jobs: [
+    {
+      "name": "preStart",
+      "exec": "python /usr/local/bin/manage.py"
+    },
+    {
+      "name": "preStop",
+      "exec": "python /usr/local/bin/manage.py pre_stop"
+    },
+    {{ if .CONSUL_AGENT }}
+    {
+      "name": "consul-agent",
+      "exec": ["/usr/local/bin/consul", "agent",
+                "-data-dir=/opt/consul/data",
+                "-config-dir=/opt/consul/config",
+                "-rejoin",
+                "-retry-join", "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}",
+                "-retry-max", "10",
+                "-retry-interval", "10s"],
+       "restarts": "unlimited"
+    },
+    {{ end }}
     {
       "name": "mongodb-replicaset",
       "port": 27017,
-      "health": "python /usr/local/bin/manage.py health",
-      "poll": 5,
-      "ttl": 25
+      "exec": "mongod --replSet={{ if .REPLICASET }}{{ .REPLICASET }}{{ else }}joyent{{ end }}",
+      "when": {
+        "source": "preStart",
+        "once": "exitSuccess"
+      },
+      "health": {
+        "exec": "python /usr/local/bin/manage.py health",
+        "interval": 10,
+        "ttl": 25
+      },
+    },
+    {
+      "name": "onchange-mongo",
+      "exec": "python /usr/local/bin/manage.py on_change",
+      "when": {
+        "source": "watch.mongodb-replicaset",
+        "each": "changed"
+      }
     }
   ],
-  "backends": [
+  "watches": [
     {
       "name": "mongodb-replicaset",
-      "poll": 10,
-      "onChange": "python /usr/local/bin/manage.py on_change"
+      "interval": 2
     }
-  ],
-  "coprocesses": [{{ if .CONSUL_AGENT }}
-    {
-      "command": ["/usr/local/bin/consul", "agent",
-                  "-data-dir=/opt/consul/data",
-                  "-config-dir=/opt/consul/config",
-                  "-rejoin",
-                  "-retry-join", "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}",
-                  "-retry-max", "10",
-                  "-retry-interval", "10s"],
-      "restarts": "unlimited"
-    }
-  {{ end }}]
+  ]
 }
