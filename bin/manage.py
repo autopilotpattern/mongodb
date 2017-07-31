@@ -8,6 +8,9 @@ import signal
 import struct
 import sys
 import time
+import datetime
+import subprocess
+import manta
 
 from functools import wraps
 
@@ -84,6 +87,12 @@ MONGO_STEPDOWN_TIME=int(get_environ('MONGO_STEPDOWN_TIME', 60))
 MONGO_SECONDARY_CATCHUP_PERIOD=int(get_environ('MONGO_SECONDARY_CATCHUP_PERIOD', 8))
 MONGO_ELECTION_TIMEOUT=int(get_environ('MONGO_ELECTION_TIMEOUT', 30))
 
+# Manta related information
+MANTA_URL=get_environ('MANTA_URL','https://us-east.manta.joyent.com')
+MANTA_USER=get_environ('MANTA_USER','')
+MANTA_KEY_ID=get_environ('MANTA_KEY_ID','')
+MANTA_TLS_INSECURE=bool(get_environ('MANTA_TLS_INSECURE',True))
+
 # ---------------------------------------------------------
 # Top-level functions called by ContainerPilot or forked by this program
 
@@ -156,13 +165,57 @@ def pre_stop():
     return True
 
 @debug
+def upload(filename):
+    try:
+        log.debug(filename)
+        client = manta.MantaClient(url=MANTA_URL,
+                                   account=MANTA_USER,
+                                   signer=manta.SSHAgentSigner([MANTA_KEY_ID]),
+                                   disable_ssl_certificate_validation=MANTA_TLS_INSECURE
+                                   )
+        client.put_object('/%s/stor/%s' % (MANTA_USER, filename), path='/tmp/%s' % filename)
+    except Exception as e:
+        log.debug(e)
+        return False
+    return True
+
+@debug
+def backup():
+    """
+    Run periodic mongodump and save backup to MANTA
+    """
+
+    hostname = socket.gethostname()
+    ip = get_ip()
+    local_mongo = MongoClient(ip, connect=False)
+
+    timestamp = datetime.datetime.utcnow().isoformat()
+    dump = "dump-%s.gz" % timestamp
+
+    try:
+        backup_output = subprocess.check_output([ 'mongodump', '--archive=/tmp/%s' % dump, '--gzip' ])
+        log.debug(backup_output)
+
+        # Upload dump onto Manta
+        #TODO: do not manage to upload to Manta
+        # upload(dump)
+
+        # Delete local dump once uploaded
+        # os.remove('/tmp/%s' % dump)
+    except Exception as e:
+        log.debug('Error during backup process');
+        log.debug(e);
+        return False
+
+    return True
+
+@debug
 def health():
     """
     Run a simple health check. Also acts as a check for whether the
     ContainerPilot configuration needs to be reloaded (if it's been
     changed externally).
     """
-    # TODO periodic mongodumps to Manta
 
     hostname = socket.gethostname()
     ip = get_ip()
