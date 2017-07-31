@@ -32,7 +32,7 @@
       exec: "python /usr/local/bin/manage.py backup",
       restartLimit: 0,
       when: {
-        interval: "30s",
+        interval: "6h",
       }
     },
     {{ end }}
