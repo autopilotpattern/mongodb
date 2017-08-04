@@ -44,7 +44,7 @@ ENV MONGO_SECONDARY_CATCHUP_PERIOD 8
 ENV MONGO_STEPDOWN_TIME 60
 ENV MONGO_ELECTION_TIMEOUT 30
 
-# configure ContainerPilot and MySQL
+# Configure ContainerPilot and Mongo
 COPY etc/* /etc/
 COPY bin/* /usr/local/bin/
 

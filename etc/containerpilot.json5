@@ -26,13 +26,12 @@
        restarts: "unlimited"
     },
     {{ end }}
-    {{ if .DUMP }}
+    {{ if .DUMP_INTERVAL }}
     {
       name: "backup",
       exec: "python /usr/local/bin/manage.py backup",
-      restartLimit: 0,
       when: {
-        interval: "6h",
+        interval: "{{ .DUMP_INTERVAL }}",
       }
     },
     {{ end }}
