@@ -26,15 +26,6 @@
        restarts: "unlimited"
     },
     {{ end }}
-    {{ if .DUMP_INTERVAL }}
-    {
-      name: "backup",
-      exec: "python /usr/local/bin/manage.py backup",
-      when: {
-        interval: "{{ .DUMP_INTERVAL }}",
-      }
-    },
-    {{ end }}
     {
       name: "mongodb-replicaset",
       port: 27017,

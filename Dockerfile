@@ -21,8 +21,8 @@ RUN curl -Ls -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 		mock==2.0.0
 
 # Add consul agent
-RUN export CONSUL_VERSION=0.9.0 \
-    && export CONSUL_CHECKSUM=33e54c7d9a93a8ce90fc87f74c7f787068b7a62092b7c55a945eea9939e8577f \
+RUN export CONSUL_VERSION=1.0.6 \
+    && export CONSUL_CHECKSUM=bcc504f658cef2944d1cd703eda90045e084a15752d23c038400cf98c716ea01 \
     && curl --retry 7 --fail -vo /tmp/consul.zip "https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip" \
     && echo "${CONSUL_CHECKSUM}  /tmp/consul.zip" | sha256sum -c \
     && unzip /tmp/consul -d /usr/local/bin \
@@ -30,9 +30,9 @@ RUN export CONSUL_VERSION=0.9.0 \
     && mkdir -p /opt/consul/config
 
 # Add ContainerPilot and set its configuration file path
-ENV CONTAINERPILOT_VER 3.3.0
+ENV CONTAINERPILOT_VER 3.7.0
 ENV CONTAINERPILOT /etc/containerpilot.json5
-RUN export CONTAINERPILOT_CHECKSUM=62621712ef6ba755e24805f616096de13e2fd087 \
+RUN export CONTAINERPILOT_CHECKSUM=b10b30851de1ae1c095d5f253d12ce8fe8e7be17 \
     && curl -Lso /tmp/containerpilot.tar.gz \
         "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VER}/containerpilot-${CONTAINERPILOT_VER}.tar.gz" \
     && echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
