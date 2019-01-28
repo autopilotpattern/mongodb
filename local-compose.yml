@@ -2,7 +2,6 @@ version: '2.1'
 services:
     mongodb:
         image: autopilotpattern/mongodb
-        command: --replSet=rs0
         restart: always
         mem_limit: 512m
         build: .
