@@ -19,10 +19,6 @@ import consul as pyconsul
 from pymongo import MongoClient
 from pymongo.errors import *
 
-CONSUL_AGENT = bool(get_environ('CONSUL_AGENT', False))
-CONSUL_HOST = ('localhost' if CONSUL_AGENT else get_environ('CONSUL', 'consul'))
-
-consul = pyconsul.Consul(host=CONSUL_HOST)
 logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s',
                     stream=sys.stdout,
                     level=logging.getLevelName(
@@ -66,6 +62,11 @@ def get_environ(key, default):
         return val
 
 # ---------------------------------------------------------
+
+CONSUL_AGENT = bool(get_environ('CONSUL_AGENT', False))
+CONSUL_HOST = ('localhost' if CONSUL_AGENT else get_environ('CONSUL', 'consul'))
+
+consul = pyconsul.Consul(host=CONSUL_HOST)
 
 SESSION_CACHE_FILE = get_environ('SESSION_CACHE_FILE', '/tmp/mongodb-session')
 SESSION_NAME = get_environ('SESSION_NAME', 'mongodb-replica-set-lock')
