@@ -71,9 +71,8 @@ SESSION_CACHE_FILE = get_environ('SESSION_CACHE_FILE', '/tmp/mongodb-session')
 SESSION_NAME = get_environ('SESSION_NAME', 'mongodb-replica-set-lock')
 SESSION_TTL = int(get_environ('SESSION_TTL', 60))
 
-# consts for node state
-PRIMARY = 'mongodb-replicaset'
-#SECONDARY = 'mongodb-secondary'
+# name of containerpilot job, consul service, and mongo replicaset
+SERVICE_NAME = get_environ('REPLICASET', 'mongodb-replicaset')
 
 # key where primary will be stored in consul
 PRIMARY_KEY = get_environ('PRIMARY_KEY', 'mongodb-primary')
@@ -335,7 +334,7 @@ def mongo_update_replset_config(local_mongo, hostname):
         repl_config = repl_config['config']
 
         # use consul health to get our healthy services
-        index, consul_services = consul.health.service(PRIMARY)
+        index, consul_services = consul.health.service(SERVICE_NAME)
 
         # translate the name stored by consul to be the "host" name stored
         # in mongo config, skipping any non-mongo services
@@ -388,9 +387,7 @@ def mongo_update_replset_config(local_mongo, hostname):
         sys.exit(1)
 
 def consul_to_mongo_hostname(service):
-#    if name.startswith(SECONDARY + '-'):
-#        prefix = SECONDARY + '-'
-    if service['ID'].startswith(PRIMARY + '-'):
+    if service['ID'].startswith(SERVICE_NAME + '-'):
         return service['Address'] + ':' + str(service['Port'])
     else:
         return None

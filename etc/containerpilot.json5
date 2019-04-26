@@ -27,9 +27,9 @@
     },
     {{ end }}
     {
-      name: "mongodb-replicaset",
+      name: "{{ .REPLICASET | default "mongodb-replicaset" }}",
       port: 27017,
-      exec: "mongod --replSet={{ if .REPLICASET }}{{ .REPLICASET }}{{ else }}joyent{{ end }}",
+      exec: "mongod --replSet={{ .REPLICASET | default "mongodb-replicaset" }}",
       when: {
         source: "preStart",
         once: "exitSuccess"
@@ -41,17 +41,17 @@
       },
     },
     {
-      name: "onchange-mongo",
+      name: "onchange-{{ .REPLICASET | default "mongodb-replicaset" }}",
       exec: "python /usr/local/bin/manage.py on_change",
       when: {
-        source: "watch.mongodb-replicaset",
+        source: "watch.{{ .REPLICASET | default "mongodb-replicaset" }}",
         each: "changed"
       }
     },
   ],
   watches: [
     {
-      name: "mongodb-replicaset",
+      name: "{{ .REPLICASET | default "mongodb-replicaset" }}",
       interval: 2
     }
   ]
