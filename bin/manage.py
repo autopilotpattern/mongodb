@@ -123,7 +123,7 @@ def pre_stop():
         is_mongo_primary = repl_status['myState'] == 1
         # ref https://docs.mongodb.com/manual/reference/replica-states/
     except Exception as e:
-        log.error(e, 'unable to get primary status while shuting down')
+        log.error('unable to get primary status while shuting down: %s', e)
         return True
 
     if is_mongo_primary:
@@ -275,7 +275,7 @@ def on_change():
         is_mongo_primary = repl_status['myState'] == 1
         # ref https://docs.mongodb.com/manual/reference/replica-states/
     except Exception as e:
-        log.error(e, 'unable to get primary status')
+        log.error('unable to get primary status: %s', e)
         return False
 
     if is_mongo_primary:
